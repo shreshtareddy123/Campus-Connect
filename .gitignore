@@ -16,3 +16,4 @@ backend/.env
 # OS-specific files
 .DS_Store
 Thumbs.db
+apphosting.local.yaml
