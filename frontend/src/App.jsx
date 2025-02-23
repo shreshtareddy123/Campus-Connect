@@ -9,7 +9,7 @@ function App() {
 
   return (
     <div>
-      <h1>Campus-Connect Yayyyy!!!</h1>
+      <h1>Campus-Connect Yayyyy Lesgoooo!!!</h1>
     </div>
   );
 }
