@@ -1,6 +1,8 @@
 // src/firebase.js
 import { initializeApp } from 'firebase/app';
 import { getAnalytics } from 'firebase/analytics';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 // We load all config values from environment variables
 // (prefixed with VITE_ so that Vite exposes them in the browser).
@@ -14,6 +16,7 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
 // Initialize Analytics (optional)
@@ -22,4 +25,9 @@ if (firebaseConfig.measurementId) {
   analytics = getAnalytics(app);
 }
 
-export { app, analytics };
+// Initialize Auth and Firestore
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Export everything needed
+export { app, analytics, auth, db };
