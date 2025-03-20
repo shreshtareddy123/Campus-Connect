@@ -5,6 +5,10 @@ import { auth, db } from '../firebase'; // Make sure your firebase.js exports au
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
+import { jwtDecode } from "jwt-decode";
+
+import {GoogleLogin} from "@react-oauth/google"
+
 const ProfessorAuth = () => {
   const [isSignup, setIsSignup] = useState(true); // toggle between signup and login modes
   const [name, setName] = useState('');
@@ -57,6 +61,16 @@ const ProfessorAuth = () => {
     }
     setLoading(false);
   };
+
+  
+  const handleGoogleLoginSuccess = async (credentialResponse) =>
+  {
+    const credentialResponseDecoded= jwtDecode(
+      credentialResponse.credential
+    );
+    console.log(credentialResponseDecoded);
+  };
+
 
   return (
     <Box
@@ -132,6 +146,12 @@ const ProfessorAuth = () => {
         </Button>
       </Box>
       
+      <GoogleLogin
+        clientId="972463573659-a33gied87s4vnj158cj48mtd8afv6jf4.apps.googleusercontent.com"
+        onSuccess={handleGoogleLoginSuccess}
+        onError={() => setErrorMsg('Google login failed.')}
+      />
+
       <Button
         onClick={() => setIsSignup(!isSignup)}
         sx={{ mt: 2 }}
