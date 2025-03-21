@@ -1,20 +1,33 @@
 import { useState } from 'react';
-import { Box, Typography, Button, Menu, MenuItem, Paper } from '@mui/material';
+import { Box, Typography, Paper, Button, Menu, MenuItem } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import backgroundImage from '../assets/arielview.jpg'; // Import background image
+import backgroundImage from '../assets/arielview.jpg'; // Background image
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const [anchorElLogin, setAnchorElLogin] = useState(null);
   const [anchorElSignup, setAnchorElSignup] = useState(null);
 
-  // Handle Login Menu
-  const handleLoginMenuOpen = (event) => setAnchorElLogin(event.currentTarget);
-  const handleLoginMenuClose = () => setAnchorElLogin(null);
+  // Open dropdown menu
+  const handleMenuOpen = (event, type) => {
+    if (type === 'login') setAnchorElLogin(event.currentTarget);
+    if (type === 'signup') setAnchorElSignup(event.currentTarget);
+  };
 
-  // Handle Signup Menu
-  const handleSignupMenuOpen = (event) => setAnchorElSignup(event.currentTarget);
-  const handleSignupMenuClose = () => setAnchorElSignup(null);
+  // Close dropdown menu
+  const handleClose = () => {
+    setAnchorElLogin(null);
+    setAnchorElSignup(null);
+  };
+
+  // Force Navigation
+  const handleNavigate = (path) => {
+    console.log("Navigating to:", path); // Debugging output
+    handleClose();
+    setTimeout(() => {
+      navigate(path, { replace: true }); // Force replace to make sure navigation happens
+    }, 200);
+  };
 
   return (
     <Box
@@ -30,73 +43,78 @@ const LandingPage = () => {
         px: 2,
       }}
     >
-      {/* Square White Box */}
+      {/* White Box in the Center */}
       <Paper
-        elevation={5}
+        elevation={4}
         sx={{
           backgroundColor: 'white',
           padding: '3rem',
           borderRadius: '20px',
-          width: '450px',  // Ensures a square-like design
-          height: '450px', // Ensures equal width & height
+          maxWidth: '700px',
+          width: '85%',
+          minHeight: '420px',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
           justifyContent: 'center',
-          textAlign: 'center',
+          alignItems: 'center',
           position: 'relative',
         }}
       >
-        {/* Login & Signup Buttons in Top Right Corner */}
+        {/* Login & Signup Buttons in Top Right */}
         <Box sx={{ position: 'absolute', top: 20, right: 30, display: 'flex', gap: 2 }}>
-          <Button 
-            variant="text" 
-            onMouseEnter={handleLoginMenuOpen}
-            sx={{ textTransform: 'none', fontWeight: 600, fontSize: '18px', color: '#333', fontFamily: 'Montserrat, sans-serif' }}
+          {/* Login Button */}
+          <Button
+            variant="text"
+            onClick={(e) => handleMenuOpen(e, 'login')}
+            sx={{ textTransform: 'none', fontWeight: 600, fontSize: '16px', color: '#333' }}
           >
             Login
           </Button>
-          <Menu
-            anchorEl={anchorElLogin}
-            open={Boolean(anchorElLogin)}
-            onClose={handleLoginMenuClose}
-            MenuListProps={{ onMouseLeave: handleLoginMenuClose }}
-          >
-            <MenuItem onClick={() => navigate('/student-login')}>Student Login</MenuItem>
-            <MenuItem onClick={() => navigate('/professor-login')}>Professor Login</MenuItem>
+          <Menu anchorEl={anchorElLogin} open={Boolean(anchorElLogin)} onClose={handleClose}>
+            <MenuItem onClick={() => handleNavigate('/student-login')}>Student Login</MenuItem>
+            <MenuItem onClick={() => handleNavigate('/professor-login')}>Professor Login</MenuItem>
           </Menu>
 
-          <Button 
-            variant="text" 
-            onMouseEnter={handleSignupMenuOpen}
-            sx={{ textTransform: 'none', fontWeight: 600, fontSize: '18px', color: '#333', fontFamily: 'Montserrat, sans-serif' }}
+          {/* Signup Button */}
+          <Button
+            variant="text"
+            onClick={(e) => handleMenuOpen(e, 'signup')}
+            sx={{ textTransform: 'none', fontWeight: 600, fontSize: '16px', color: '#333' }}
           >
             Signup
           </Button>
-          <Menu
-            anchorEl={anchorElSignup}
-            open={Boolean(anchorElSignup)}
-            onClose={handleSignupMenuClose}
-            MenuListProps={{ onMouseLeave: handleSignupMenuClose }}
-          >
-            <MenuItem onClick={() => navigate('/student-signup')}>Student Signup</MenuItem>
-            <MenuItem onClick={() => navigate('/professor-signup')}>Professor Signup</MenuItem>
+          <Menu anchorEl={anchorElSignup} open={Boolean(anchorElSignup)} onClose={handleClose}>
+            <MenuItem onClick={() => handleNavigate('/student-signup')}>Student Signup</MenuItem>
+            <MenuItem onClick={() => handleNavigate('/professor-signup')}>Professor Signup</MenuItem>
           </Menu>
         </Box>
 
-        {/* Main Content Inside White Box */}
-        <Typography 
-          variant="h2" 
-          fontWeight="bold" 
-          sx={{ color: '#000', fontFamily: 'Montserrat, sans-serif', mb: 2 }}
+        {/* Heading Styled Like the Reference Image */}
+        <Typography
+          variant="h3"
+          fontWeight="bold"
+          sx={{
+            color: '#000',
+            fontFamily: '"Playfair Display", serif',
+            mb: 2,
+            textAlign: 'center',
+          }}
         >
           Campus Connect
         </Typography>
-        <Typography 
-          variant="h6" 
-          sx={{ mt: 1, mb: 3, color: '#555', fontFamily: 'Montserrat, sans-serif' }}
+
+        <Typography
+          variant="h6"
+          sx={{
+            mt: 1,
+            mb: 3,
+            color: '#555',
+            fontFamily: '"Playfair Display", serif',
+            maxWidth: '500px',
+            textAlign: 'center',
+          }}
         >
-          A platform that connects students and professors for academic opportunities.
+          Connecting students and professors for a better academic experience.
         </Typography>
       </Paper>
     </Box>

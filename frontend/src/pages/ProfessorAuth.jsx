@@ -1,46 +1,40 @@
 import { useState } from 'react';
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Alert,
-  InputAdornment,
-  CircularProgress,
-  Paper,
-  Fade
-} from '@mui/material';
-import { Email, Lock, Person } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { Box, Typography, Button, TextField, Alert } from '@mui/material';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
 const ProfessorAuth = () => {
-  const [isSignup, setIsSignup] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const isLoginPath = location.pathname.includes('login');
+  const isSignup = !isLoginPath;
+
   const [name, setName] = useState('');
   const [department, setDepartment] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setLoading(true);
 
-    if (isSignup && (!name || !email || !password)) {
-      setErrorMsg('Please fill in all required fields.');
-      setLoading(false);
-      return;
-    }
-
     try {
       if (isSignup) {
+        if (!name || !email || !password) {
+          setErrorMsg('Please fill in all required fields.');
+          setLoading(false);
+          return;
+        }
+
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
+
         await setDoc(doc(db, 'users', user.uid), {
           name,
           email,
@@ -48,6 +42,7 @@ const ProfessorAuth = () => {
           role: 'professor',
           createdAt: new Date().toISOString(),
         });
+
         navigate('/professor-dashboard');
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -63,96 +58,93 @@ const ProfessorAuth = () => {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
-        backgroundColor: 'background.default',
+        width: '100%',
+        height: '100vh',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        px: 2,
+        textAlign: 'center',
+        margin: 0,
+        padding: 0,
+        overflowX: 'hidden',
       }}
     >
-      <Fade in>
-        <Paper elevation={4} sx={{ p: 4, maxWidth: 420, width: '100%' }}>
-          <Typography variant="h4" align="center" gutterBottom>
-            {isSignup ? 'Professor Sign Up' : 'Professor Login'}
-          </Typography>
+      <Typography variant="h4" gutterBottom>
+        {isSignup ? 'Professor Sign-Up' : 'Professor Login'}
+      </Typography>
 
-          {errorMsg && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {errorMsg}
-            </Alert>
-          )}
+      {errorMsg && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {errorMsg}
+        </Alert>
+      )}
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {isSignup && (
-              <>
-                <TextField
-                  label="Full Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Person />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <TextField
-                  label="Department (optional)"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                />
-              </>
-            )}
-
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          width: '100%',
+          maxWidth: '400px',
+        }}
+      >
+        {isSignup && (
+          <>
             <TextField
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              label="Name"
+              variant="outlined"
               required
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Email />
-                  </InputAdornment>
-                ),
-              }}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
-
             <TextField
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Lock />
-                  </InputAdornment>
-                ),
-              }}
+              label="Department (optional)"
+              variant="outlined"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
             />
+          </>
+        )}
+        <TextField
+          label="Email"
+          variant="outlined"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <TextField
+          label="Password"
+          variant="outlined"
+          type="password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-            <Button type="submit" variant="contained" fullWidth disabled={loading}>
-              {loading ? <CircularProgress size={24} color="inherit" /> : (isSignup ? 'Sign Up' : 'Log In')}
-            </Button>
-          </Box>
+        <Button type="submit" variant="contained" disabled={loading}>
+          {isSignup ? 'Sign Up' : 'Log In'}
+        </Button>
+      </Box>
 
-          <Button onClick={() => setIsSignup(!isSignup)} fullWidth sx={{ mt: 2 }}>
-            {isSignup
-              ? 'Already have an account? Log In'
-              : "Don't have an account? Sign Up"}
-          </Button>
+      <Button
+        onClick={() =>
+          navigate(isSignup ? '/professor-login' : '/professor-signup')
+        }
+        sx={{ mt: 2 }}
+        variant="text"
+      >
+        {isSignup
+          ? 'Already have an account? Log In'
+          : "Don't have an account? Sign Up"}
+      </Button>
 
-          <Button variant="contained" color="secondary" fullWidth sx={{ mt: 1 }} onClick={() => navigate('/')}>
-            Back to Home
-          </Button>
-        </Paper>
-      </Fade>
+      <Button variant="outlined" onClick={() => navigate('/')} sx={{ mt: 2 }}>
+        Back to Landing
+      </Button>
     </Box>
   );
 };
