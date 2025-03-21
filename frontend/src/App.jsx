@@ -23,10 +23,17 @@ const App = () => {
         {/* Fix: Make sure these Student routes exist */}
         <Route path="/student-login" element={<StudentAuth />} />
         <Route path="/student-signup" element={<StudentAuth />} />
+        {/* Professor routes */}
+        <Route path="/professor-login" element={<ProfessorAuth />} />
+        <Route path="/professor-dashboard" element={<ProfessorDashboard />} />
+
+        {/* Student routes */}
+        <Route path="/student-login" element={<StudentAuth />} />
         <Route path="/student-dashboard" element={<StudentDashboard />} />
       </Routes>
     </ThemeProvider>
   );
 };
+
 
 export default App;
