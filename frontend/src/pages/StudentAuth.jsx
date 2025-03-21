@@ -3,7 +3,8 @@ import { Box, Typography, Button, TextField, Alert } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 
 
 import { jwtDecode } from "jwt-decode";
@@ -59,12 +60,38 @@ const StudentAuth = () => {
     setLoading(false);
   };
 
-   const handleGoogleLoginSuccess = async (credentialResponse) =>
+  const handleGoogleLoginSuccess = async (credentialResponse) => 
     {
-      const credentialResponseDecoded= jwtDecode(
-        credentialResponse.credential
-      );
-      console.log(credentialResponseDecoded);
+      try 
+      {
+        const credentialResponseDecoded = jwtDecode(credentialResponse.credential);
+    
+        const { sub, name, email, picture } = credentialResponseDecoded; 
+    
+        const credential = GoogleAuthProvider.credential(credentialResponse.credential);
+        const userCredential = await signInWithCredential(auth, credential);
+        const user = userCredential.user;
+    
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+    
+        if (!userSnap.exists()) 
+        {
+          await setDoc(userRef, 
+          {
+            name,
+            email,
+            department: "",
+            role: "student",
+            createdAt: new Date().toISOString(),
+          });
+        } 
+        navigate('/student-dashboard');
+      } 
+      catch (error)
+      {
+        console.error("Google Sign-In Error:", error);
+      }
     };
   
 
@@ -146,6 +173,7 @@ const StudentAuth = () => {
         clientId="972463573659-a33gied87s4vnj158cj48mtd8afv6jf4.apps.googleusercontent.com"
         onSuccess={handleGoogleLoginSuccess}
         onError={() => setErrorMsg('Google login failed.')}
+        // auto_select={true}
       />
 
       <Button
