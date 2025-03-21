@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Box, Typography, Button, TextField, Alert } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -10,34 +10,35 @@ import { jwtDecode } from "jwt-decode";
 import {GoogleLogin} from "@react-oauth/google"
 
 const StudentAuth = () => {
-  const [isSignup, setIsSignup] = useState(true); 
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const isLoginPath = location.pathname.includes('login');
+  const isSignup = !isLoginPath;
+
   const [name, setName] = useState('');
   const [major, setMajor] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setLoading(true);
 
-    if (isSignup) {
-      // Basic validation
-      if (!name || !email || !password) {
-        setErrorMsg('Please fill in all required fields.');
-        setLoading(false);
-        return;
-      }
+    try {
+      if (isSignup) {
+        if (!name || !email || !password) {
+          setErrorMsg('Please fill in all required fields.');
+          setLoading(false);
+          return;
+        }
 
-      try {
-        // Create user in Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Store additional data in Firestore
         await setDoc(doc(db, 'users', user.uid), {
           name,
           email,
@@ -46,20 +47,15 @@ const StudentAuth = () => {
           createdAt: new Date().toISOString(),
         });
 
-        // Redirect to Student Dashboard
         navigate('/student-dashboard');
-      } catch (error) {
-        setErrorMsg(error.message);
-      }
-    } else {
-      // Login mode
-      try {
+      } else {
         await signInWithEmailAndPassword(auth, email, password);
         navigate('/student-dashboard');
-      } catch (error) {
-        setErrorMsg(error.message);
       }
+    } catch (error) {
+      setErrorMsg(error.message);
     }
+
     setLoading(false);
   };
 
@@ -124,7 +120,6 @@ const StudentAuth = () => {
             />
           </>
         )}
-
         <TextField
           label="Email"
           variant="outlined"
@@ -154,7 +149,9 @@ const StudentAuth = () => {
       />
 
       <Button
-        onClick={() => setIsSignup(!isSignup)}
+        onClick={() =>
+          navigate(isSignup ? '/student-login' : '/student-signup')
+        }
         sx={{ mt: 2 }}
         variant="text"
       >

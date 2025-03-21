@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Typography, Button, TextField, Alert } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../firebase'; // Make sure your firebase.js exports auth and db
+import { useNavigate, useLocation } from 'react-router-dom';
+import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
@@ -10,34 +10,35 @@ import { jwtDecode } from "jwt-decode";
 import {GoogleLogin} from "@react-oauth/google"
 
 const ProfessorAuth = () => {
-  const [isSignup, setIsSignup] = useState(true); // toggle between signup and login modes
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const isLoginPath = location.pathname.includes('login');
+  const isSignup = !isLoginPath;
+
   const [name, setName] = useState('');
   const [department, setDepartment] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setLoading(true);
 
-    if (isSignup) {
-      // Ensure required fields are filled for signup
-      if (!name || !email || !password) {
-        setErrorMsg('Please fill in all required fields.');
-        setLoading(false);
-        return;
-      }
-      // You can add password complexity validation here if desired
+    try {
+      if (isSignup) {
+        if (!name || !email || !password) {
+          setErrorMsg('Please fill in all required fields.');
+          setLoading(false);
+          return;
+        }
 
-      try {
-        // Create the user with email and password
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-        // Save additional professor info in Firestore
+
         await setDoc(doc(db, 'users', user.uid), {
           name,
           email,
@@ -45,20 +46,16 @@ const ProfessorAuth = () => {
           role: 'professor',
           createdAt: new Date().toISOString(),
         });
-        // Optionally, redirect to a professor dashboard
+
         navigate('/professor-dashboard');
-      } catch (error) {
-        setErrorMsg(error.message);
-      }
-    } else {
-      // Login mode
-      try {
+      } else {
         await signInWithEmailAndPassword(auth, email, password);
         navigate('/professor-dashboard');
-      } catch (error) {
-        setErrorMsg(error.message);
       }
+    } catch (error) {
+      setErrorMsg(error.message);
     }
+
     setLoading(false);
   };
 
@@ -84,19 +81,19 @@ const ProfessorAuth = () => {
         textAlign: 'center',
         margin: 0,
         padding: 0,
-        overflowX: 'hidden', // ensures no horizontal scrollbar
+        overflowX: 'hidden',
       }}
     >
       <Typography variant="h4" gutterBottom>
         {isSignup ? 'Professor Sign-Up' : 'Professor Login'}
       </Typography>
-      
+
       {errorMsg && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {errorMsg}
         </Alert>
       )}
-      
+
       <Box
         component="form"
         onSubmit={handleSubmit}
@@ -141,6 +138,7 @@ const ProfessorAuth = () => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+
         <Button type="submit" variant="contained" disabled={loading}>
           {isSignup ? 'Sign Up' : 'Log In'}
         </Button>
@@ -153,7 +151,9 @@ const ProfessorAuth = () => {
       />
 
       <Button
-        onClick={() => setIsSignup(!isSignup)}
+        onClick={() =>
+          navigate(isSignup ? '/professor-login' : '/professor-signup')
+        }
         sx={{ mt: 2 }}
         variant="text"
       >
@@ -161,6 +161,7 @@ const ProfessorAuth = () => {
           ? 'Already have an account? Log In'
           : "Don't have an account? Sign Up"}
       </Button>
+
       <Button variant="outlined" onClick={() => navigate('/')} sx={{ mt: 2 }}>
         Back to Landing
       </Button>
