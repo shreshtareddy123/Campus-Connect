@@ -1,11 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap');
+
 html, body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  overflow-x: hidden; /* remove horizontal scrollbar */
+  overflow-x: hidden;
 }
 *, *::before, *::after {
   box-sizing: inherit;
+}
+.MuiTypography-root {
+  font-family: 'Playfair Display', serif !important;
 }
