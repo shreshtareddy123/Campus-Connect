@@ -1,215 +1,238 @@
-import React, { useState } from "react";
-import {
-  Card,
-  CardContent,
-  Button,
-  TextField,
-  Box,
-  Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Drawer,
-  Chip
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
-import SchoolIcon from "@mui/icons-material/School";
-import HistoryIcon from "@mui/icons-material/History";
+import React, { useState, useEffect } from 'react';
+import { Box, Button, Card, CardContent, Typography, Chip, TextField, MenuItem, Select, InputLabel, FormControl, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import { useNavigate } from 'react-router-dom';
+import { auth, db } from '../firebase';
+import { collection, getDocs, addDoc, deleteDoc, query, where, doc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const ProfessorCourses = () => {
-  const [courses, setCourses] = useState([
-    { id: 1, title: "Machine Learning", description: "Intro to ML algorithms", link: "#", type: "current" },
-    { id: 2, title: "Operating Systems", description: "Process management & concurrency", link: "#", type: "past" },
-  ]);
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newCourse, setNewCourse] = useState({
+    courseName: '',
+    description: '',
+    status: 'Ongoing',
+    link: '',  // Link for the course
+  });
+  const [user, setUser] = useState(null);
+  const [isFormVisible, setFormVisible] = useState(false); // For Dialog visibility
+  const navigate = useNavigate();
 
-  const [newCourse, setNewCourse] = useState({ title: "", description: "", link: "", type: "current" });
-  const [openDrawer, setOpenDrawer] = useState(false);
+  // Listen to auth changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        setUser(null);
+      }
+    });
 
-  const handleAddCourse = () => {
-    if (newCourse.title && newCourse.description) {
-      setCourses([...courses, { ...newCourse, id: Date.now() }]);
-      setNewCourse({ title: "", description: "", link: "", type: "current" });
-      setOpenDrawer(false);
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch courses belonging to the logged-in professor
+  useEffect(() => {
+    if (user) {
+      const fetchCourses = async () => {
+        try {
+          const q = query(collection(db, 'courses'), where('professorId', '==', user.uid));
+          const querySnapshot = await getDocs(q);
+          const fetchedCourses = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setCourses(fetchedCourses);
+        } catch (err) {
+          console.error('Error fetching courses:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchCourses();
+    }
+  }, [user]);
+
+  // Handle removing a course
+  const handleRemoveCourse = async (id) => {
+    try {
+      // Delete the course from Firestore
+      await deleteDoc(doc(db, 'courses', id));
+      
+      // Update the UI by removing the course from state
+      setCourses(courses.filter((course) => course.id !== id));
+    } catch (err) {
+      console.error('Error deleting course:', err);
     }
   };
 
-  const handleRemoveCourse = (id) => {
-    setCourses(courses.filter((course) => course.id !== id));
+  // Add new course to Firestore
+  const handleAddCourse = async () => {
+    if (!newCourse.courseName || !newCourse.description || !newCourse.link) {
+      alert('Please fill in all fields correctly.');
+      return;
+    }
+
+    try {
+      const courseId = generateCourseId(newCourse.courseName);  // Generate the courseId dynamically
+
+      await addDoc(collection(db, 'courses'), {
+        courseName: newCourse.courseName,
+        description: newCourse.description,
+        status: newCourse.status,
+        courseId: courseId,  // Automatically generated courseId
+        link: newCourse.link,
+        professorId: user.uid,
+      });
+
+      // Clear form and reload the course list
+      setNewCourse({ courseName: '', description: '', status: 'Ongoing', link: '' });
+      const q = query(collection(db, 'courses'), where('professorId', '==', user.uid));
+      const querySnapshot = await getDocs(q);
+      const fetchedCourses = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setCourses(fetchedCourses);
+      setFormVisible(false); // Close the dialog after adding course
+    } catch (err) {
+      console.error('Error adding course:', err);
+    }
   };
 
+  // Generate courseId based on course name and random numbers
+  const generateCourseId = (courseName) => {
+    const deptPrefix = courseName.slice(0, 2).toUpperCase();  // Get first two letters
+    const randomNumber = Math.floor(1000 + Math.random() * 9000); // Generate 4 random digits
+    return deptPrefix + randomNumber;
+  };
+
+  // Handle input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewCourse((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // Display loading or error message
+  if (loading) {
+    return <div>Loading courses...</div>;
+  }
+
   return (
-    <Box sx={{
-      padding: '4rem',
-      minHeight: '100vh',
-      backgroundColor: '#f8f9fa',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center'
-    }}>
-      <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 4, color: '#2c3e50' }}>
-        Your Courses
+    <Box>
+      <Typography variant="h4" gutterBottom>
+        My Courses
       </Typography>
 
-      <Box sx={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-        gap: '2rem',
-        width: '100%',
-        maxWidth: '1000px'
-      }}>
+      <Box display="flex" flexWrap="wrap" gap={2} style={{ position: 'relative' }}>
         {courses.map((course) => (
-          <Card key={course.id} sx={{
-            padding: '1.5rem',
-            borderRadius: '16px',
-            boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)',
-            position: 'relative',
-            backgroundColor: '#ffffff',
-            transition: 'transform 0.2s ease-in-out',
-            display: 'flex',
-            flexDirection: 'column',
-            '&:hover': {
-              transform: 'scale(1.03)'
-            }
-          }}>
-            <Chip
-              label={course.type === "past" ? "Completed" : "Ongoing"}
-              sx={{
-                position: 'absolute',
-                top: 12,
-                right: 12,
-                fontSize: 14,
-                fontWeight: 'bold',
-                padding: '5px 10px',
-                borderRadius: '20px',
-                color: 'white',
-                backgroundColor: course.type === "past" ? '#e74c3c' : '#27ae60'
-              }}
-            />
+          <Card key={course.id} style={{ width: '250px', marginBottom: '20px' }}>
             <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                {course.type === "past" ? (
-                  <HistoryIcon sx={{ color: "#e74c3c" }} />
-                ) : (
-                  <SchoolIcon sx={{ color: "#27ae60" }} />
-                )}
-                <Typography variant="h6" sx={{ fontWeight: "bold", flexGrow: 1 }}>{course.title}</Typography>
-              </Box>
-              <Typography variant="body2" sx={{ color: "#555", mt: 1 }}>{course.description}</Typography>
+              <Chip
+                label={course.status === 'Ongoing' ? 'Ongoing' : 'Completed'}
+                color={course.status === 'Ongoing' ? 'primary' : 'secondary'}
+              />
+              <Typography variant="h6">{course.courseName}</Typography>
+              <Typography variant="body2">{course.description}</Typography>
 
-              {/* Course Actions */}
-              <Box sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}>
-                <Typography
-                  component="a"
-                  href={course.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{
-                    color: '#2980b9',
-                    textDecoration: 'underline',
-                    fontSize: 14
-                  }}
-                >
-                  View Course
+              {/* Display the link as a clickable hyperlink */}
+              {course.link && (
+                <Typography variant="body2" color="primary">
+                  <a href={course.link} target="_blank" rel="noopener noreferrer">
+                    Go to Course
+                  </a>
                 </Typography>
-                <Button
-                  onClick={() => handleRemoveCourse(course.id)}
-                  sx={{
-                    backgroundColor: '#e74c3c',
-                    color: 'white',
-                    border: 'none',
-                    padding: '6px',
-                    width: '36px',
-                    height: '36px',
-                    minWidth: 'unset',
-                    borderRadius: '50%',
-                    marginTop: '0.5rem',
-                    '&:hover': {
-                      backgroundColor: '#c0392b',
-                      transform: 'scale(1.1)'
-                    }
-                  }}
-                >
-                  <DeleteIcon fontSize="small" />
-                </Button>
-              </Box>
+              )}
+
+              <Button
+                onClick={() => handleRemoveCourse(course.id)}
+                startIcon={<DeleteIcon />}
+                color="error"
+                style={{ marginTop: '10px' }}
+              >
+                Delete
+              </Button>
             </CardContent>
           </Card>
         ))}
+
+        {/* Add Course Button in the bottom-right of the box */}
+        <Button
+          variant="contained"
+          onClick={() => setFormVisible(true)}
+          style={{
+            position: 'absolute',
+            bottom: '40px',
+            right: '20px',
+            borderRadius: '8px',
+            padding: '10px 20px',
+            backgroundColor: '#1976d2',
+            color: '#fff',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            fontSize: '16px',
+          }}
+          startIcon={<AddIcon />}
+        >
+          Add Course
+        </Button>
       </Box>
 
-      {/* Floating Add Button */}
-      <Button
-        variant="contained"
-        startIcon={<AddIcon />}
-        onClick={() => setOpenDrawer(true)}
-        sx={{
-          position: 'fixed',
-          bottom: 20,
-          right: 20,
-          backgroundColor: '#3498db',
-          padding: '12px 20px',
-          fontSize: 16,
-          fontWeight: 'bold',
-          borderRadius: '24px',
-          color: 'white',
-          gap: 1,
-          boxShadow: '2px 4px 10px rgba(0, 0, 0, 0.15)',
-          '&:hover': {
-            backgroundColor: '#2980b9',
-            transform: 'scale(1.05)'
-          }
-        }}
-      >
-        Add Course
-      </Button>
-
-      {/* Drawer Form */}
-      <Drawer anchor="right" open={openDrawer} onClose={() => setOpenDrawer(false)}>
-        <Box sx={{ width: 350, padding: '2rem' }}>
-          <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>Add a New Course</Typography>
+      {/* Dialog for Adding Course */}
+      <Dialog open={isFormVisible} onClose={() => setFormVisible(false)}>
+        <DialogTitle>Add New Course</DialogTitle>
+        <DialogContent>
           <TextField
-            label="Course Title"
-            value={newCourse.title}
-            onChange={(e) => setNewCourse({ ...newCourse, title: e.target.value })}
+            label="Course Name"
             fullWidth
             margin="normal"
-            variant="outlined"
+            name="courseName"
+            value={newCourse.courseName}
+            onChange={handleInputChange}
           />
           <TextField
-            label="Short Description"
+            label="Description"
+            fullWidth
+            margin="normal"
+            name="description"
             value={newCourse.description}
-            onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })}
-            fullWidth
-            margin="normal"
-            variant="outlined"
+            onChange={handleInputChange}
           />
           <TextField
-            label="Course Link (optional)"
-            value={newCourse.link}
-            onChange={(e) => setNewCourse({ ...newCourse, link: e.target.value })}
+            label="Course Link"
             fullWidth
             margin="normal"
-            variant="outlined"
+            name="link"
+            value={newCourse.link}
+            onChange={handleInputChange}
           />
+
           <FormControl fullWidth margin="normal">
-            <InputLabel>Course Type</InputLabel>
+            <InputLabel>Status</InputLabel>
             <Select
-              value={newCourse.type}
-              onChange={(e) => setNewCourse({ ...newCourse, type: e.target.value })}
-              variant="outlined"
+              label="Status"
+              name="status"
+              value={newCourse.status}
+              onChange={handleInputChange}
             >
-              <MenuItem value="current">Ongoing Course</MenuItem>
-              <MenuItem value="past">Completed Course</MenuItem>
+              <MenuItem value="Ongoing">Ongoing</MenuItem>
+              <MenuItem value="Completed">Completed</MenuItem>
             </Select>
           </FormControl>
-          <Box sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}>
-            <Button onClick={() => setOpenDrawer(false)} color="error">Cancel</Button>
-            <Button onClick={handleAddCourse} variant="contained" color="primary">Add Course</Button>
-          </Box>
-        </Box>
-      </Drawer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFormVisible(false)} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleAddCourse} color="primary">
+            Add Course
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
