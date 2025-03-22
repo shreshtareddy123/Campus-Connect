@@ -24,6 +24,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { app } from '../firebase'; // your Firebase app
 import DeleteIcon from '@mui/icons-material/Delete';
+import ProfessorCourses from "./ProfessorCourses";
 
 
 // Icons
@@ -908,9 +909,7 @@ const ProfessorDashboard = () => {
           {/* Courses Offered Tab */}
           <TabPanel value={tabValue} index={2}>
             <Typography variant="h6" gutterBottom>Courses Offered</Typography>
-            <Typography variant="body2">
-              List your Courses Offered here.
-            </Typography>
+            <ProfessorCourses />
           </TabPanel>
 
           {/* Discussion Tab */}
