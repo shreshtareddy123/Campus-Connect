@@ -35,7 +35,7 @@ const LandingPage = () => {
         width: '100vw',
         height: '100vh',
         backgroundImage: `url(${backgroundImage})`,
-        backgroundSize: 'cover',
+        backgroundSize: 'contain',
         backgroundPosition: 'center',
         display: 'flex',
         alignItems: 'center',
